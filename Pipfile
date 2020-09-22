@@ -15,6 +15,7 @@ seaborn = "*"
 graphviz = "*"
 pydot = "*"
 jupyterlab-git = "*"
+spektral = "*"
 
 [requires]
 python_version = "3.7"
