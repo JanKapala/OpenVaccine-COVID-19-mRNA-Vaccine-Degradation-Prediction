@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "952281941a4a41d1a726dbfbd2cce4642e5f398c2cc6d6b33d87d6f26f77890d"
+            "sha256": "e13d1e85089ed4c3ff1b5b4a16af15398de6d8349353450326b63948aba93551"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -314,11 +314,11 @@
         },
         "importlib-metadata": {
             "hashes": [
-                "sha256:90bb658cdbbf6d1735b6341ce708fc7024a3e14e99ffdc5783edea9f9b077f83",
-                "sha256:dc15b2969b4ce36305c51eebe62d418ac7791e9a157911d58bfb1f9ccd8e2070"
+                "sha256:77a540690e24b0305878c37ffd421785a6f7e53c8b5720d211b211de8d0e95da",
+                "sha256:cefa1a2f919b866c5beb7c9f7b0ebb4061f30a8a9bf16d609b000e2dfaceb9c3"
             ],
             "markers": "python_version < '3.8'",
-            "version": "==1.7.0"
+            "version": "==2.0.0"
         },
         "ipykernel": {
             "hashes": [
@@ -361,6 +361,14 @@
                 "sha256:d348c5d4ae31496b2aa060d6d9b787864dd204f9480baaa52d18850cb43e9f49"
             ],
             "version": "==0.16.0"
+        },
+        "joypy": {
+            "hashes": [
+                "sha256:a12598e75f4d40d72a26f7eeae6b74f4ced05c49af147ace8e3a229ab7b20395",
+                "sha256:fc0540810a6e01d39f2a5eab4c82fa5d10b22394df14dbd0b05234a78ee879f0"
+            ],
+            "index": "pypi",
+            "version": "==0.2.2"
         },
         "json5": {
             "hashes": [
@@ -571,10 +579,10 @@
         },
         "nbconvert": {
             "hashes": [
-                "sha256:8deb3f353399231316bd2b14d097bb574e6083f079e461007249d217764236d3",
-                "sha256:fa74e4fb791383792068de9806c593919cef75e993c93bb5360b792486399ef6"
+                "sha256:68335477288aab8a9b9ec03002dce59b4eb1ca967116741ec218a4e78c129efd",
+                "sha256:d8549f62e739a4d51f275c2932b1783ee5039dde07a2b71de70c0296a42c8394"
             ],
-            "version": "==6.0.5"
+            "version": "==6.0.6"
         },
         "nbdime": {
             "hashes": [

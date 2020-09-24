@@ -16,6 +16,7 @@ graphviz = "*"
 pydot = "*"
 jupyterlab-git = "*"
 spektral = "*"
+joypy = "*"
 
 [requires]
 python_version = "3.7"
