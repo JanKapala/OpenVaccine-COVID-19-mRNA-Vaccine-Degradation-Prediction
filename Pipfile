@@ -17,6 +17,7 @@ pydot = "*"
 jupyterlab-git = "*"
 spektral = "*"
 joypy = "*"
+jupyter = "*"
 
 [requires]
 python_version = "3.7"
