@@ -4,9 +4,8 @@ from data_preparation import get_raw_datasets, get_datasets
 import tensorflow as tf
 import os
 
-
 def get_example_id(example_index, raw_ds):
-    return raw_ds.iloc[example_index ,:]['id']
+    return raw_ds.iloc[example_index, :]['id']
 
 
 def predictions_to_submission(predictions, raw_ds, missing_value=0.0):
@@ -50,14 +49,15 @@ if __name__ == '__main__':
     SUBMISSIONS_DIR = os.path.join(SCRIPT_DIR, 'submissions')
 
     # GET SAVED MODEL FROM FILE
-    TESTING_MODEL_PATH=None
+    TESTING_MODEL_PATH = None
     testing_model = tf.keras.models.load_model(TESTING_MODEL_PATH)
 
     _, raw_public_test_ds, raw_private_test_ds = get_raw_datasets()
     _, public_test_ds, private_test_ds = get_datasets()
 
-    submission = create_submission(testing_model, [public_test_ds, private_test_ds], [raw_public_test_ds, raw_private_test_ds])
+    submission = create_submission(testing_model, [public_test_ds, private_test_ds],
+                                   [raw_public_test_ds, raw_private_test_ds])
 
-    submission_name = 'submission.csv'
+    submission_name = 'submission.csv.zip'
     submission_path = os.path.join(SUBMISSIONS_DIR, submission_name)
     submission.to_csv(submission_path, header=True, index=False)

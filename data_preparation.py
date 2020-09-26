@@ -13,8 +13,8 @@ from scipy.sparse import lil_matrix
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASETS_DIR = os.path.join(SCRIPT_DIR, 'datasets')
 SUBMISSIONS_DIR = os.path.join(SCRIPT_DIR, 'submissions')
-TRAIN_PATH = os.path.join(DATASETS_DIR, 'train.json')
-TEST_PATH = os.path.join(DATASETS_DIR, 'test.json')
+RAW_TRAIN_DS_PATH = os.path.join(DATASETS_DIR, 'train.json')
+RAW_TEST_DS_PATH = os.path.join(DATASETS_DIR, 'test.json')
 SAMPLE_SUBMISSION_PATH = os.path.join(SUBMISSIONS_DIR, 'sample_submission.csv')
 FEATURE_NAMES = ['sequence', 'structure', 'predicted_loop_type', 'adjacency_matrix']
 ERROR_LABEL_NAMES = ['reactivity_error', 'deg_error_Mg_pH10', 'deg_error_pH10', 'deg_error_Mg_50C', 'deg_error_50C']
@@ -43,49 +43,6 @@ def _struct2adjmatrix(structure):
 def _add_adjacency_matrix_column(raw_ds):
     raw_ds.insert(4, 'adjacency_matrix', None)
     raw_ds['adjacency_matrix'] = raw_ds['structure'].map(lambda structure: _struct2adjmatrix(structure).toarray())
-
-
-def _create_train_valid_ds(raw_train_valid_ds, feature_names, all_label_names):
-    # Transform dataframe using encoders
-    preprocessing = make_column_transformer(
-        (make_pipeline(_FeaturesEncoder()), feature_names),
-        (make_pipeline(_LabelsEncoder(all_label_names)), all_label_names),
-    )
-
-    data = pd.DataFrame(preprocessing.fit_transform(raw_train_valid_ds))
-    data.columns = feature_names + all_label_names
-
-    # Split into features and labels and convert to dictionaries of tensors
-    features_dict = data[feature_names].to_dict(orient='list')
-    for column, values in features_dict.items():
-        features_dict[column] = tf.constant(values, dtype=tf.float32)
-
-    labels_dict = data[all_label_names].to_dict(orient='list')
-    for column, values in labels_dict.items():
-        labels_dict[column] = tf.constant(values, dtype=tf.float32)
-
-    # Create tf.data.Dataset
-    train_valid_ds = tf.data.Dataset.from_tensor_slices((features_dict, labels_dict))
-
-    return train_valid_ds
-
-
-def _create_test_ds(raw_test_ds, feature_names):
-    # Transform dataframe using encoders
-    preprocessing = make_column_transformer((make_pipeline(_FeaturesEncoder()), feature_names))
-
-    data = pd.DataFrame(preprocessing.fit_transform(raw_test_ds))
-    data.columns = feature_names
-
-    # Split into features and labels and convert to dictionaries of tensors
-    features_dict = data[feature_names].to_dict(orient='list')
-    for column, values in features_dict.items():
-        features_dict[column] = tf.constant(values, dtype=tf.float32)
-
-    # Create tf.data.Dataset
-    test_ds = tf.data.Dataset.from_tensor_slices(features_dict)
-
-    return test_ds
 
 
 # HELPER PREP CLASSES
@@ -143,30 +100,68 @@ class _FeaturesEncoder(BaseEstimator, TransformerMixin):
         return example
 
 
-class _AdjacencyMatrixEncoder(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        pass
+def _create_train_valid_ds(raw_train_valid_ds, feature_names, all_label_names):
+    # Transform dataframe using encoders
+    preprocessing = make_column_transformer(
+        (make_pipeline(_FeaturesEncoder()), feature_names),
+        (make_pipeline(_LabelsEncoder(all_label_names)), all_label_names),
+    )
 
-    def fit(self, X, y=None, *args, **kwargs):
-        return self
+    data = pd.DataFrame(preprocessing.fit_transform(raw_train_valid_ds))
+    data.columns = feature_names + all_label_names
 
-    def transform(self, X, *args, **kwargs):
-        for title in self.titles:
-            X.insert(len(X.columns), title, 0)
-        X = X.apply(self.set_titles, axis='columns')
-        X.drop(columns=['Name'], inplace=True)
-        return X
+    # Split into features and labels and convert to dictionaries of tensors
+    features_dict = data[feature_names].to_dict(orient='list')
+    for column, values in features_dict.items():
+        features_dict[column] = tf.constant(values, dtype=tf.float32)
+
+    labels_dict = data[all_label_names].to_dict(orient='list')
+    for column, values in labels_dict.items():
+        labels_dict[column] = tf.constant(values, dtype=tf.float32)
+
+    # Create tf.data.Dataset
+    train_valid_ds = tf.data.Dataset.from_tensor_slices((features_dict, labels_dict))
+
+    return train_valid_ds
+
+
+def _create_test_ds(raw_test_ds, feature_names):
+    # Transform dataframe using encoders
+    preprocessing = make_column_transformer((make_pipeline(_FeaturesEncoder()), feature_names))
+
+    data = pd.DataFrame(preprocessing.fit_transform(raw_test_ds))
+    data.columns = feature_names
+
+    # Split into features and labels and convert to dictionaries of tensors
+    features_dict = data[feature_names].to_dict(orient='list')
+    for column, values in features_dict.items():
+        features_dict[column] = tf.constant(values, dtype=tf.float32)
+
+    # Create tf.data.Dataset
+    test_ds = tf.data.Dataset.from_tensor_slices(features_dict)
+
+    return test_ds
+
+
+# class _AdjacencyMatrixEncoder(BaseEstimator, TransformerMixin):
+#     def __init__(self):
+#         pass
+#
+#     def fit(self, X, y=None, *args, **kwargs):
+#         return self
+#
+#     def transform(self, X, *args, **kwargs):
+#         for title in self.titles:
+#             X.insert(len(X.columns), title, 0)
+#         X = X.apply(self.set_titles, axis='columns')
+#         X.drop(columns=['Name'], inplace=True)
+#         return X
 
 
 # PUBLIC FUNCTIONS
-def get_sample_submission():
-    sample_submission = pd.read_csv(SAMPLE_SUBMISSION_PATH)
-    return sample_submission
-
-
 def get_raw_datasets():
-    raw_train_valid_ds = pd.read_json(TRAIN_PATH, lines=True)
-    raw_test_ds = pd.read_json(TEST_PATH, lines=True)
+    raw_train_valid_ds = pd.read_json(RAW_TRAIN_DS_PATH, lines=True)
+    raw_test_ds = pd.read_json(RAW_TEST_DS_PATH, lines=True)
 
     _add_adjacency_matrix_column(raw_train_valid_ds)
     _add_adjacency_matrix_column(raw_test_ds)
@@ -179,6 +174,13 @@ def get_raw_datasets():
 
 def get_datasets():
     raw_train_valid_ds, raw_public_test_ds, raw_private_test_ds = get_raw_datasets()
+    train_valid_ds = _create_train_valid_ds(raw_train_valid_ds, FEATURE_NAMES, ALL_LABEL_NAMES)
+    public_test_ds = _create_test_ds(raw_public_test_ds, FEATURE_NAMES)
+    private_test_ds = _create_test_ds(raw_private_test_ds, FEATURE_NAMES)
+
+    return train_valid_ds, public_test_ds, private_test_ds
+
+def convert_to_datasets(raw_train_valid_ds, raw_public_test_ds, raw_private_test_ds):
     train_valid_ds = _create_train_valid_ds(raw_train_valid_ds, FEATURE_NAMES, ALL_LABEL_NAMES)
     public_test_ds = _create_test_ds(raw_public_test_ds, FEATURE_NAMES)
     private_test_ds = _create_test_ds(raw_private_test_ds, FEATURE_NAMES)
@@ -217,3 +219,8 @@ def trim(x, y, trim_to):
     for label in y.keys():
         y[label] = y[label][:trim_to, :]
     return x, y
+
+
+def get_sample_submission():
+    sample_submission = pd.read_csv(SAMPLE_SUBMISSION_PATH)
+    return sample_submission
