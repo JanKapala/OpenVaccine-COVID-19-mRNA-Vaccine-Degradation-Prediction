@@ -4,15 +4,15 @@ import numpy as np
 
 class WindowingLayer(tf.keras.layers.Layer):
     def __init__(self, window_size):
-        super(WindowingLayer, self).__init__()
+        super().__init__()
         self.window_size = window_size
 
-    def call(self, input):
-        batch_size, seq_len, feature_size = input.shape
+    def call(self, inputs, **kwargs):
+        batch_size, seq_len, feature_size = inputs.shape
 
-        first_part = tf.stack([input[:, i: i + self.window_size] for i in range(0, seq_len - self.window_size + 1)],
+        first_part = tf.stack([inputs[:, i: i + self.window_size] for i in range(0, seq_len - self.window_size + 1)],
                               axis=1)
-        incomplete_part = [input[:, i: i + self.window_size] for i in range(seq_len - self.window_size + 1, seq_len)]
+        incomplete_part = [inputs[:, i: i + self.window_size] for i in range(seq_len - self.window_size + 1, seq_len)]
 
         second_part = np.zeros([batch_size, self.window_size - 1, self.window_size, feature_size])
 
