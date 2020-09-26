@@ -1,0 +1,10 @@
+covid.iml
+workspace.xml
+__pycache__/
+.idea/
+.ipynb_checkpoints/
+logs/
+sequence_generator_model_tmp/
+submission.csv
+testing_model/
+training_model/
