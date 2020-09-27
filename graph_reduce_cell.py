@@ -38,9 +38,9 @@ class GraphReduceCell(tf.keras.layers.AbstractRNNCell):
         return self.units
 
     def call(self, inputs, states):
-        features, adj_matrix = inputs
+        features, adj_matrix, edges_features_matrix = inputs
 
-        node_features = self.conv_graph_layer([features, adj_matrix])
+        node_features = self.conv_graph_layer([features, adj_matrix, edges_features_matrix])
         single_node_channels = self.pool_graph_layer(node_features)
 
         return single_node_channels, states
@@ -55,46 +55,61 @@ if __name__ == '__main__':
     seq_len = 7
     window_size = 5
     feature_size = 3
+    edges_features_size = 3
 
     # print('DATA DIMESIONS:')
     # print(f"    -> batch_size: {batch_size}")
     # print(f"    -> seq_len: {seq_len}")
     # print(f"    -> window_size: {window_size}")
     # print(f"    -> feature_size: {feature_size}")
+    # print(f"    -> edges_features_size: {edges_features_size}")
     # print()
 
     # print('EAGER TENSORS')
     features_batch = tf.random.uniform((batch_size, seq_len, window_size, feature_size))
     adj_matrices_batch = tf.random.uniform((batch_size, seq_len, window_size, window_size))
-    inputs_batch = (features_batch, adj_matrices_batch)
+    edges_features_matrices_batch = tf.random.uniform((batch_size, seq_len, window_size, window_size,
+                                                       edges_features_size))
+    inputs_batch = (features_batch, adj_matrices_batch, edges_features_matrices_batch)
     # print('Batch of full sequences:')
     # print(f"    -> features_batch.shape: {features_batch.shape}")
     # print(f"    -> adj_matrices_batch.shape: {adj_matrices_batch.shape}")
+    # print(f"    -> edges_features_matrices_batch.shape: {edges_features_matrices_batch.shape}")
     # print()
 
     features_batch_at_t = features_batch[:, 0, :, :]
     adj_matrices_batch_at_t = adj_matrices_batch[:, 0, :, :]
-    inputs_batch_at_t = (features_batch_at_t, adj_matrices_batch_at_t)
+    edges_features_matrices_batch_at_t = edges_features_matrices_batch[:, 0, :, :, :]
+    inputs_batch_at_t = (features_batch_at_t, adj_matrices_batch_at_t, edges_features_matrices_batch_at_t)
     # print('Batch of one timestep:')
     # print(f"    -> features_batch_at_t.shape: {features_batch_at_t.shape}")
     # print(f"    -> adj_matrices_batch_at_t.shape: {adj_matrices_batch_at_t.shape}")
+    # print(f"    -> edges_features_matrices_batch_at_t.shape: {edges_features_matrices_batch_at_t.shape}")
     # print()
 
     # print('SYMBOLIC TENSORS')
     features_batch_symbolic = tf.keras.layers.Input((None, window_size, feature_size))
     adj_matrices_batch_symbolic = tf.keras.layers.Input((None, window_size, window_size))
-    inputs_batch_symbolic = (features_batch_symbolic, adj_matrices_batch_symbolic)
+    edges_features_matrices_batch_symbolic = tf.keras.layers.Input((None, window_size, window_size,
+                                                                    edges_features_size))
+    inputs_batch_symbolic = (features_batch_symbolic, adj_matrices_batch_symbolic,
+                             edges_features_matrices_batch_symbolic)
     # print('Batch of full sequences:')
     # print(f"    -> features_batch_symbolic.shape: {features_batch_symbolic.shape}")
     # print(f"    -> adj_matrices_batch_symbolic.shape: {adj_matrices_batch_symbolic.shape}")
+    # print(f"    -> edges_features_matrices_batch_symbolic.shape: {edges_features_matrices_batch_symbolic.shape}")
     # print()
 
     features_batch_symbolic_at_t = features_batch_symbolic[:, 0, :, :]
     adj_matrices_batch_symbolic_at_t = adj_matrices_batch_symbolic[:, 0, :, :]
-    inputs_batch_symbolic_at_t = (features_batch_symbolic_at_t, adj_matrices_batch_symbolic_at_t)
+    edges_features_matrices_batch_symbolic_at_t = edges_features_matrices_batch_symbolic[:, 0, :, :, :]
+    inputs_batch_symbolic_at_t = (features_batch_symbolic_at_t, adj_matrices_batch_symbolic_at_t,
+                                  edges_features_matrices_batch_symbolic_at_t)
     # print('Batch of one timestep:')
     # print(f"    -> features_batch_symbolic_at_t.shape: {features_batch_symbolic_at_t.shape}")
     # print(f"    -> adj_matrices_batch_symbolic_at_t.shape: {adj_matrices_batch_symbolic_at_t.shape}")
+    # print(f"    -> edges_features_matrices_batch_symbolic_at_t.shape: "
+    #       f"{edges_features_matrices_batch_symbolic_at_t.shape}")
 
     # GraphReduceCell test
     units = 11

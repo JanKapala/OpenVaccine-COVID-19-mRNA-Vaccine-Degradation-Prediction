@@ -7,7 +7,8 @@ import tensorflow as tf
 from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
-from scipy.sparse import lil_matrix
+
+import matplotlib.pyplot as plt
 
 # CONSTANTS
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -24,25 +25,41 @@ SCORED_LABEL_NAMES = ['reactivity', 'deg_Mg_pH10', 'deg_Mg_50C']
 
 
 # HELPER PREP FUNCTIONS
-def _struct2adjmatrix(structure):
-    N = len(structure)
-    adjacency_matrix = lil_matrix((N, N))
+def _struct2matrices(structure):
+    n = len(structure)
+    adjacency_matrix = np.zeros((n, n))
+    edges_features_matrix = np.zeros((n, n, 3))
+    edges_features_matrix[:, :, 0] = 1  # Initialize with [1, 0, 0]
+
+    def add_bond(i, j, bond_type):
+        bond_map = {'phosphodiester': [0, 1, 0], 'hydrogen': [0, 0, 1]}
+        bond = bond_map[bond_type]
+
+        adjacency_matrix[i, j] = 1
+        adjacency_matrix[j, i] = 1
+        edges_features_matrix[i, j] = bond
+        edges_features_matrix[j, i] = bond
+
     stack = []
     for i, symbol in enumerate(structure):
+        if i != 0:
+            add_bond(i, i - 1, 'phosphodiester')
+
         if symbol == '.':
             continue
         elif symbol == '(':
             stack.append(i)
         elif symbol == ')':
             j = stack.pop()
-            adjacency_matrix[i, j] = 1
-            adjacency_matrix[j, i] = 1
-    return adjacency_matrix.tocsr()
+            add_bond(i, j, 'hydrogen')
+    return adjacency_matrix, edges_features_matrix
 
 
-def _add_adjacency_matrix_column(raw_ds):
+def _add_graph_matrices_columns(raw_ds):
     raw_ds.insert(4, 'adjacency_matrix', None)
-    raw_ds['adjacency_matrix'] = raw_ds['structure'].map(lambda structure: _struct2adjmatrix(structure).toarray())
+    raw_ds.insert(5, 'edges_features_matrix', None)
+    temp = raw_ds['structure'].map(lambda structure: _struct2matrices(structure))
+    raw_ds[['adjacency_matrix', 'edges_features_matrix']] = pd.DataFrame(temp.tolist())
 
 
 # HELPER PREP CLASSES
@@ -143,28 +160,13 @@ def _create_test_ds(raw_test_ds, feature_names):
     return test_ds
 
 
-# class _AdjacencyMatrixEncoder(BaseEstimator, TransformerMixin):
-#     def __init__(self):
-#         pass
-#
-#     def fit(self, X, y=None, *args, **kwargs):
-#         return self
-#
-#     def transform(self, X, *args, **kwargs):
-#         for title in self.titles:
-#             X.insert(len(X.columns), title, 0)
-#         X = X.apply(self.set_titles, axis='columns')
-#         X.drop(columns=['Name'], inplace=True)
-#         return X
-
-
 # PUBLIC FUNCTIONS
 def get_raw_datasets():
     raw_train_valid_ds = pd.read_json(RAW_TRAIN_DS_PATH, lines=True)
     raw_test_ds = pd.read_json(RAW_TEST_DS_PATH, lines=True)
 
-    _add_adjacency_matrix_column(raw_train_valid_ds)
-    _add_adjacency_matrix_column(raw_test_ds)
+    _add_graph_matrices_columns(raw_train_valid_ds)
+    _add_graph_matrices_columns(raw_test_ds)
 
     raw_public_test_ds = raw_test_ds.loc[raw_test_ds['seq_length'] == 107]
     raw_private_test_ds = raw_test_ds.loc[raw_test_ds['seq_length'] == 130]
@@ -225,3 +227,6 @@ def trim(x, y, trim_to):
 def get_sample_submission():
     sample_submission = pd.read_csv(SAMPLE_SUBMISSION_PATH)
     return sample_submission
+
+
+
