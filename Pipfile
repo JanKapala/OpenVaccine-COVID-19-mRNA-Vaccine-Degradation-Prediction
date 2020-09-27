@@ -18,6 +18,7 @@ jupyterlab-git = "*"
 spektral = "*"
 joypy = "*"
 jupyter = "*"
+bidict = "*"
 
 [requires]
 python_version = "3.7"
