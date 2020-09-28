@@ -44,26 +44,18 @@ def get_neighbours(adj_matrix, neigh_size, vertex_id):
 
         processed.append(processing)
 
-    return processed
+    return sorted(processed)
 
 
-def get_subfeatures(adj_matrix, edges_matrix, features, neigh_size):
+def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
     windowed_adj, windowed_edges, windowed_features = [], [], []
 
     for vertex_id in range(adj_matrix.shape[0]):
-        neighbours = get_neighbours(adj_matrix, neigh_size, vertex_id)
-        mapped_orig_dict = bidict({i: j for i, j in enumerate(neighbours)})
+        neighbours = get_neighbours(adj_matrix, neigh_size-1, vertex_id)
 
-        new_adj = np.zeros((len(neighbours), len(neighbours)))
-        new_edges = np.zeros((len(neighbours), len(neighbours), edges_matrix.shape[-1]))
+        new_adj = np.copy(adj_matrix[neighbours][:, neighbours])
+        new_edges = np.copy(edges_matrix[neighbours][:, neighbours])
         new_features = np.copy(features[neighbours])
-
-        for mapped_v in mapped_orig_dict.keys():
-            for orig_v in np.where(adj_matrix[mapped_orig_dict[mapped_v]])[1]:
-                if orig_v in list(mapped_orig_dict.values()):
-                    new_adj[mapped_v][mapped_orig_dict.inverse[orig_v]] = adj_matrix[mapped_orig_dict[mapped_v], orig_v]
-                    new_edges[mapped_v][mapped_orig_dict.inverse[orig_v]] = edges_matrix[
-                        mapped_orig_dict[mapped_v], orig_v]
 
         windowed_adj.append(new_adj)
         windowed_edges.append(new_edges)
@@ -76,7 +68,7 @@ def get_subfeatures(adj_matrix, edges_matrix, features, neigh_size):
     return windowed_adj, windowed_edges, windowed_features
 
 
-def windowing_layer(adj_matrix_batch, edges_matrix_batch, features_batch, neigh_size):
+def windowing_layer(features_batch, adj_matrix_batch, edges_matrix_batch, neigh_size):
     batch_size = adj_matrix_batch.shape[0]
 
     batch_windowed_adj, batch_windowed_edges, batch_windowed_features = [], [], []
@@ -100,8 +92,9 @@ class SubgraphingLayer(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.neighbourhood_size = neighbourhood_size
 
-    def call(self, inputs):
-        return windowing_layer(inputs[0], inputs[1], inputs[2])
+    def call(self, inputs, training=None, mask=None):
+        return windowing_layer(inputs[0], inputs[1], inputs[2], self.neighbourhood_size)
+
 
 if __name__ == '__main__':
     # Get sample data batch
@@ -109,7 +102,6 @@ if __name__ == '__main__':
     train_valid_with_stacked_labels_ds = train_valid_ds.map(only_stacked_scored_labels)
     exp_ds = train_valid_with_stacked_labels_ds.batch(2).take(1)
     batch = next(iter(exp_ds))
-
 
     # Define inputs
     INPUT_SEQUENCE_LENGTH = None
@@ -139,7 +131,6 @@ if __name__ == '__main__':
 
     # Create model
     exp_model = Model(inputs=inputs, outputs=outputs)
-
 
     # Test model with subgraphing layer
     print(exp_model(batch))
