@@ -2,6 +2,12 @@ import tensorflow as tf
 import numpy as np
 from bidict import bidict
 
+from tensorflow.python.keras import Input
+from tensorflow.python.keras.layers import Concatenate
+from tensorflow.python.keras.models import Model
+
+from data_preparation import get_datasets, only_stacked_scored_labels
+
 
 class WindowingLayer(tf.keras.layers.Layer):
     def __init__(self, window_size):
@@ -96,3 +102,44 @@ class SubgraphingLayer(tf.keras.layers.Layer):
 
     def call(self, inputs):
         return windowing_layer(inputs[0], inputs[1], inputs[2])
+
+if __name__ == '__main__':
+    # Get sample data batch
+    train_valid_ds, public_test_ds, private_test_ds = get_datasets()
+    train_valid_with_stacked_labels_ds = train_valid_ds.map(only_stacked_scored_labels)
+    exp_ds = train_valid_with_stacked_labels_ds.batch(2).take(1)
+    batch = next(iter(exp_ds))
+
+
+    # Define inputs
+    INPUT_SEQUENCE_LENGTH = None
+    EDGES_FEATURES_MATRIX_DEPTH = 3
+    sequence_input = Input(shape=(INPUT_SEQUENCE_LENGTH, 4),
+                           name='sequence')
+    structure_input = Input(shape=(INPUT_SEQUENCE_LENGTH, 3),
+                            name='structure')
+    predicted_loop_type_input = Input(shape=(INPUT_SEQUENCE_LENGTH, 7),
+                                      name='predicted_loop_type')
+
+    adjacency_matrix_input = Input(shape=(None, None), name='adjacency_matrix')
+    edges_features_matrix_input = Input(shape=(None, None, EDGES_FEATURES_MATRIX_DEPTH), name='edges_features_matrix')
+
+    inputs = [sequence_input, structure_input, predicted_loop_type_input, adjacency_matrix_input,
+              edges_features_matrix_input]
+
+    # Stack features
+    features_to_stack = [sequence_input, structure_input, predicted_loop_type_input]
+    features_input = Concatenate(axis=2, name='input_stacking_layer')(features_to_stack)
+
+    # Prepare input for subgraphing layer
+    input_for_sg = (adjacency_matrix_input, edges_features_matrix_input, features_input)
+
+    sg_layer = SubgraphingLayer(10)
+    outputs = sg_layer(input_for_sg)
+
+    # Create model
+    exp_model = Model(inputs=inputs, outputs=outputs)
+
+
+    # Test model with subgraphing layer
+    print(exp_model(batch))
