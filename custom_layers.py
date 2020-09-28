@@ -32,6 +32,10 @@ class WindowingLayer(tf.keras.layers.Layer):
 
 
 def get_neighbours(adj_matrix, neigh_size, vertex_id):
+    # print(f"adj_matrix: {adj_matrix}")
+    # print(f"adj_matrix.shape: {adj_matrix.shape}")
+    # print(f"neigh_size: {neigh_size}")
+    # print(f"vertex_id: {vertex_id}")
     processed = []
     in_progress = [vertex_id]
 
@@ -69,7 +73,8 @@ def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
 
 
 def windowing_layer(features_batch, adj_matrix_batch, edges_matrix_batch, neigh_size):
-    batch_size = adj_matrix_batch.shape[0]
+    batch_size = tf.shape(adj_matrix_batch)[0]
+    print(f"batch size: {batch_size}")
 
     batch_windowed_adj, batch_windowed_edges, batch_windowed_features = [], [], []
 
@@ -93,44 +98,53 @@ class SubgraphingLayer(tf.keras.layers.Layer):
         self.neighbourhood_size = neighbourhood_size
 
     def call(self, inputs, training=None, mask=None):
-        return windowing_layer(inputs[0], inputs[1], inputs[2], self.neighbourhood_size)
+        features_batch = inputs[0]
+        adj_matrix_batch = inputs[1]
+        edges_features_matrix_batch = inputs[2]
+
+        outputs = tf.py_function(func=windowing_layer,
+                                 inp=[features_batch, adj_matrix_batch, edges_features_matrix_batch,
+                                      self.neighbourhood_size],
+                                 Tout=[tf.float32, tf.float32, tf.float32])
+
+        # Maybe some outputs.set_shape(...)
+
+        return outputs
 
 
 if __name__ == '__main__':
-    # Get sample data batch
+    # GET SMALL EXPERIMENTAL DATASET
+    # WARRING: It takes a while, so I suggest to move this testing code to jupyter (split code into cells and use `from custom_layers import *`)
     train_valid_ds, public_test_ds, private_test_ds = get_datasets()
     train_valid_with_stacked_labels_ds = train_valid_ds.map(only_stacked_scored_labels)
     exp_ds = train_valid_with_stacked_labels_ds.batch(2).take(1)
-    batch = next(iter(exp_ds))
+
+    # BUILD TESTING MODEL
 
     # Define inputs
-    INPUT_SEQUENCE_LENGTH = None
-    EDGES_FEATURES_MATRIX_DEPTH = 3
-    sequence_input = Input(shape=(INPUT_SEQUENCE_LENGTH, 4),
-                           name='sequence')
-    structure_input = Input(shape=(INPUT_SEQUENCE_LENGTH, 3),
-                            name='structure')
-    predicted_loop_type_input = Input(shape=(INPUT_SEQUENCE_LENGTH, 7),
-                                      name='predicted_loop_type')
+    sequence_input = Input(shape=(None, 4), name='sequence')
+    structure_input = Input(shape=(None, 3), name='structure')
+    predicted_loop_type_input = Input(shape=(None, 7), name='predicted_loop_type')
 
     adjacency_matrix_input = Input(shape=(None, None), name='adjacency_matrix')
-    edges_features_matrix_input = Input(shape=(None, None, EDGES_FEATURES_MATRIX_DEPTH), name='edges_features_matrix')
+    edges_features_matrix_input = Input(shape=(None, None, 3), name='edges_features_matrix')
 
     inputs = [sequence_input, structure_input, predicted_loop_type_input, adjacency_matrix_input,
               edges_features_matrix_input]
 
     # Stack features
     features_to_stack = [sequence_input, structure_input, predicted_loop_type_input]
-    features_input = Concatenate(axis=2, name='input_stacking_layer')(features_to_stack)
+    features_input = Concatenate(axis=2, name='features')(features_to_stack)
 
     # Prepare input for subgraphing layer
-    input_for_sg = (adjacency_matrix_input, edges_features_matrix_input, features_input)
+    inputs_for_sg_layer = [features_input, adjacency_matrix_input, edges_features_matrix_input]
 
     sg_layer = SubgraphingLayer(10)
-    outputs = sg_layer(input_for_sg)
+    outputs = sg_layer(inputs_for_sg_layer)
 
     # Create model
-    exp_model = Model(inputs=inputs, outputs=outputs)
+    model = Model(inputs=inputs, outputs=outputs)
 
-    # Test model with subgraphing layer
-    print(exp_model(batch))
+    output = model.predict(exp_ds)
+
+    # TODO: some check on output
