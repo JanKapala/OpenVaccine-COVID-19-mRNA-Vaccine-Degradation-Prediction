@@ -1,6 +1,5 @@
 /__pycache__/
 /.idea/
-.idea/workspace.xml
 /.ipynb_checkpoints/
 /logs/
 /sequence_generator_model_tmp/
