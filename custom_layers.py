@@ -8,40 +8,13 @@ from tensorflow.python.keras.models import Model
 
 from data_preparation import get_datasets, only_stacked_scored_labels
 
-
-class WindowingLayer(tf.keras.layers.Layer):
-    def __init__(self, window_size):
-        super().__init__()
-        self.window_size = window_size
-
-    def call(self, inputs, **kwargs):
-        batch_size, seq_len, feature_size = inputs.shape
-
-        first_part = tf.stack([inputs[:, i: i + self.window_size] for i in range(0, seq_len - self.window_size + 1)],
-                              axis=1)
-        incomplete_part = [inputs[:, i: i + self.window_size] for i in range(seq_len - self.window_size + 1, seq_len)]
-
-        second_part = np.zeros([batch_size, self.window_size - 1, self.window_size, feature_size])
-
-        for i in range(self.window_size - 1):
-            for j in range(self.window_size - i - 1):
-                for k in range(batch_size):
-                    second_part[k, i, j] = incomplete_part[i][k][j]
-
-        return tf.concat([first_part, second_part], axis=1)
-
-
 def get_neighbours(adj_matrix, neigh_size, vertex_id):
-    # print(f"adj_matrix: {adj_matrix}")
-    # print(f"adj_matrix.shape: {adj_matrix.shape}")
-    # print(f"neigh_size: {neigh_size}")
-    # print(f"vertex_id: {vertex_id}")
     processed = []
     in_progress = [vertex_id]
 
     while len(processed) < neigh_size + 1:
         processing = in_progress.pop(0)
-        neighbours = np.where(adj_matrix[processing])[1]
+        neighbours = np.where(adj_matrix[processing])[0]
         for v in neighbours:
             if not (v in processed or v in in_progress):
                 in_progress.append(v)
@@ -52,12 +25,13 @@ def get_neighbours(adj_matrix, neigh_size, vertex_id):
 
 
 def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
+
     windowed_adj, windowed_edges, windowed_features = [], [], []
+    all_neighbours = np.array([sorted(list(distances.keys())[:neigh_size]) for node, distances in list(bellmann_ford.items())])
 
     for vertex_id in range(adj_matrix.shape[0]):
-        neighbours = get_neighbours(adj_matrix, neigh_size-1, vertex_id)
-        print(f"neighbours: {neighbours}")
-
+        neighbours = all_neighbours[vertex_id]
+        
         new_adj = np.copy(adj_matrix[neighbours][:, neighbours])
         new_edges = np.copy(edges_matrix[neighbours][:, neighbours])
         new_features = np.copy(features[neighbours])
@@ -74,13 +48,17 @@ def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
 
 
 def windowing_layer(features_batch, adj_matrix_batch, edges_matrix_batch, neigh_size):
+    features_batch = features_batch.numpy()
+    adj_matrix_batch = adj_matrix_batch.numpy()
+    edges_matrix_batch = edges_matrix_batch.numpy()
+    
     batch_size = tf.shape(adj_matrix_batch)[0]
 
     batch_windowed_adj, batch_windowed_edges, batch_windowed_features = [], [], []
 
     for example in range(batch_size):
         example_windowed_adj, example_windowed_edges, example_windowing_features = get_subfeatures(
-            adj_matrix_batch[example], edges_matrix_batch[example], features_batch[example], neigh_size)
+            features_batch[example], adj_matrix_batch[example], edges_matrix_batch[example], neigh_size)
         batch_windowed_adj.append(example_windowed_adj)
         batch_windowed_edges.append(example_windowed_edges)
         batch_windowed_features.append(example_windowing_features)
@@ -89,7 +67,7 @@ def windowing_layer(features_batch, adj_matrix_batch, edges_matrix_batch, neigh_
     batch_windowed_edges = np.stack(batch_windowed_edges, axis=0)
     batch_windowed_features = np.stack(batch_windowed_features, axis=0)
 
-    return batch_windowed_adj, batch_windowed_edges, batch_windowed_features
+    return batch_windowed_features, batch_windowed_adj, batch_windowed_edges
 
 
 class SubgraphingLayer(tf.keras.layers.Layer):
@@ -105,9 +83,9 @@ class SubgraphingLayer(tf.keras.layers.Layer):
         outputs = tf.py_function(func=windowing_layer,
                                  inp=[features_batch, adj_matrix_batch, edges_features_matrix_batch,
                                       self.neighbourhood_size],
-                                 Tout=[tf.float32, tf.float32, tf.float32])
+                                 Tout=[tf.float32, tf.float32, tf.float32,])
 
-        # Maybe some outputs.set_shape(...)
+#         Maybe some outputs.set_shape(...)
 
         return outputs
 
