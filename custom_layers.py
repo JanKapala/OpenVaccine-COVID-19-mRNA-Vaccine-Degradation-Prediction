@@ -8,70 +8,122 @@ from tensorflow.python.keras.models import Model
 
 from data_preparation import get_datasets, only_stacked_scored_labels
 
-def get_neighbours(adj_matrix, neigh_size, vertex_id):
-    processed = []
-    in_progress = [vertex_id]
+import networkx as nx
 
-    while len(processed) < neigh_size + 1:
-        processing = in_progress.pop(0)
-        neighbours = np.where(adj_matrix[processing])[0]
-        for v in neighbours:
-            if not (v in processed or v in in_progress):
-                in_progress.append(v)
-
-        processed.append(processing)
-
-    return sorted(processed)
+from networkx.generators.classic import path_graph
+from networkx.algorithms.shortest_paths.weighted import all_pairs_dijkstra_path_length as dijkstra
 
 
-def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
+def get_neighbourhood_indices(adjacency_matrix, neigh_size):
+    # construct nx Graph
+    G = nx.from_numpy_matrix(adjacency_matrix)
 
-    windowed_adj, windowed_edges, windowed_features = [], [], []
-    all_neighbours = np.array([sorted(list(distances.keys())[:neigh_size]) for node, distances in list(bellmann_ford.items())])
+    # extract neigh_size neighbours
+    shortest_paths_results = dict(dijkstra(G))
 
-    for vertex_id in range(adj_matrix.shape[0]):
-        neighbours = all_neighbours[vertex_id]
-        
-        new_adj = np.copy(adj_matrix[neighbours][:, neighbours])
-        new_edges = np.copy(edges_matrix[neighbours][:, neighbours])
-        new_features = np.copy(features[neighbours])
+    neighbourhood_indices = [sorted(list(distances.keys())[:neigh_size]) for node, distances in
+                             list(shortest_paths_results.items())]
 
-        windowed_adj.append(new_adj)
-        windowed_edges.append(new_edges)
-        windowed_features.append(new_features)
+    # Without this slice will be NOT get correctly
+    neighbourhood_indices = np.array(neighbourhood_indices)
 
-    windowed_adj = np.stack(windowed_adj, axis=0)
-    windowed_edges = np.stack(windowed_edges, axis=0)
-    windowed_features = np.stack(windowed_features, axis=0)
-
-    return windowed_adj, windowed_edges, windowed_features
+    return neighbourhood_indices
 
 
-def windowing_layer(features_batch, adj_matrix_batch, edges_matrix_batch, neigh_size):
+def extract_subgraphs_features(features_sequence, neighbourhood_indices):
+    # Choose rows by indices
+    subgraphs_features = features_sequence[neighbourhood_indices]
+
+    return subgraphs_features
+
+
+def extract_subgraphs_adj_matrices(matrix, neighbourhood_indices):
+    # Get final dimension of each subgraph's matrix
+    N = matrix.shape[0]
+    n = neighbourhood_indices.shape[1]
+
+    # Choose rows by indices
+    x = matrix[neighbourhood_indices]
+
+    # Transpose to make possible choosing columns
+    x = np.transpose(x, (0, 2, 1))
+
+    # Choose columns by indices
+    x = x[:, neighbourhood_indices]
+
+    # Choose diagonal
+    diagonal_indices = np.arange(0, N ** 2, N + 1)
+    x = x.reshape(N ** 2, n, n)[diagonal_indices]
+
+    # Subgraphs' matrices need transposing
+    subgraphs_matrices = np.transpose(x, (0, 2, 1))
+
+    return subgraphs_matrices
+
+
+def extract_subgraphs_edge_features_matrices(matrix, neighbourhood_indices):
+    # Get final dimension of each subgraph's matrix
+    N = matrix.shape[0]
+    n = neighbourhood_indices.shape[1]
+
+    # Choose rows by indices
+    x = matrix[neighbourhood_indices]
+
+    # Transpose to make possible choosing columns
+    x = np.transpose(x, (0, 2, 1, 3))
+
+    # Choose columns by indices
+    x = x[:, neighbourhood_indices]
+
+    # Choose diagonal
+    diagonal_indices = np.arange(0, N ** 2, N + 1)
+    x = x.reshape(N ** 2, n, n, 3)[diagonal_indices]
+
+    # Subgraphs' matrices need transposing
+    subgraphs_matrices = np.transpose(x, (0, 2, 1, 3))
+
+    return subgraphs_matrices
+
+
+def get_subgraphs(features_sequence, adjacency_matrix, edges_features_matrix, neigh_size):
+    neighbourhood_indices = get_neighbourhood_indices(adjacency_matrix, neigh_size)
+
+    subgraphs_features_sequences = extract_subgraphs_features(features_sequence, neighbourhood_indices)
+    subgraphs_adjacency_matrices = extract_subgraphs_adj_matrices(adjacency_matrix, neighbourhood_indices)
+    subgraphs_edges_features_matrices = extract_subgraphs_edge_features_matrices(edges_features_matrix,
+                                                                                 neighbourhood_indices)
+
+    return subgraphs_features_sequences, subgraphs_adjacency_matrices, subgraphs_edges_features_matrices
+
+
+def get_subgraphs_of_batch(features_batch, adj_matrix_batch, edges_features_matrix_batch, neigh_size):
     features_batch = features_batch.numpy()
     adj_matrix_batch = adj_matrix_batch.numpy()
-    edges_matrix_batch = edges_matrix_batch.numpy()
-    
-    batch_size = tf.shape(adj_matrix_batch)[0]
+    edges_features_matrix_batch = edges_features_matrix_batch.numpy()
 
-    batch_windowed_adj, batch_windowed_edges, batch_windowed_features = [], [], []
+    batch_size = features_batch.shape[0]
 
-    for example in range(batch_size):
-        example_windowed_adj, example_windowed_edges, example_windowing_features = get_subfeatures(
-            features_batch[example], adj_matrix_batch[example], edges_matrix_batch[example], neigh_size)
-        batch_windowed_adj.append(example_windowed_adj)
-        batch_windowed_edges.append(example_windowed_edges)
-        batch_windowed_features.append(example_windowing_features)
+    subgraphed_features_batch = []
+    subgraphed_adj_matrices_batch = []
+    subgraphed_edges_features_matrices_batch = []
 
-    batch_windowed_adj = np.stack(batch_windowed_adj, axis=0)
-    batch_windowed_edges = np.stack(batch_windowed_edges, axis=0)
-    batch_windowed_features = np.stack(batch_windowed_features, axis=0)
+    for i in range(batch_size):
+        subgraphs_features_sequences, subgraphs_adjacency_matrices, subgraphs_edges_features_matrices = get_subgraphs(
+            features_batch[i], adj_matrix_batch[i], edges_features_matrix_batch[i], neigh_size)
+        subgraphed_features_batch.append(subgraphs_features_sequences)
+        subgraphed_adj_matrices_batch.append(subgraphs_adjacency_matrices)
+        subgraphed_edges_features_matrices_batch.append(subgraphs_edges_features_matrices)
 
-    return batch_windowed_features, batch_windowed_adj, batch_windowed_edges
+    subgraphed_features_batch = np.stack(subgraphed_features_batch, axis=0)
+    subgraphed_adj_matrices_batch = np.stack(subgraphed_adj_matrices_batch, axis=0)
+    subgraphed_edges_features_matrices_batch = np.stack(subgraphed_edges_features_matrices_batch, axis=0)
+
+    return subgraphed_features_batch, subgraphed_adj_matrices_batch, subgraphed_edges_features_matrices_batch
 
 
 class SubgraphingLayer(tf.keras.layers.Layer):
     def __init__(self, neighbourhood_size, **kwargs):
+        print('here we are')
         super().__init__(**kwargs)
         self.neighbourhood_size = neighbourhood_size
 
@@ -80,10 +132,10 @@ class SubgraphingLayer(tf.keras.layers.Layer):
         adj_matrix_batch = inputs[1]
         edges_features_matrix_batch = inputs[2]
 
-        outputs = tf.py_function(func=windowing_layer,
+        outputs = tf.py_function(func=get_subgraphs_of_batch,
                                  inp=[features_batch, adj_matrix_batch, edges_features_matrix_batch,
                                       self.neighbourhood_size],
-                                 Tout=[tf.float32, tf.float32, tf.float32,])
+                                 Tout=[tf.float32, tf.float32, tf.float32])
 
 #         Maybe some outputs.set_shape(...)
 
