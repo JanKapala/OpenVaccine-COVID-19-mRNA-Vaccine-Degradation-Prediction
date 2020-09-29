@@ -56,6 +56,7 @@ def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
 
     for vertex_id in range(adj_matrix.shape[0]):
         neighbours = get_neighbours(adj_matrix, neigh_size-1, vertex_id)
+        print(f"neighbours: {neighbours}")
 
         new_adj = np.copy(adj_matrix[neighbours][:, neighbours])
         new_edges = np.copy(edges_matrix[neighbours][:, neighbours])
@@ -74,7 +75,6 @@ def get_subfeatures(features, adj_matrix, edges_matrix, neigh_size):
 
 def windowing_layer(features_batch, adj_matrix_batch, edges_matrix_batch, neigh_size):
     batch_size = tf.shape(adj_matrix_batch)[0]
-    print(f"batch size: {batch_size}")
 
     batch_windowed_adj, batch_windowed_edges, batch_windowed_features = [], [], []
 
