@@ -123,7 +123,6 @@ def get_subgraphs_of_batch(features_batch, adj_matrix_batch, edges_features_matr
 
 class SubgraphingLayer(tf.keras.layers.Layer):
     def __init__(self, neighbourhood_size, **kwargs):
-        print('here we are')
         super().__init__(**kwargs)
         self.neighbourhood_size = neighbourhood_size
 
@@ -139,7 +138,7 @@ class SubgraphingLayer(tf.keras.layers.Layer):
 
 #         Maybe some outputs.set_shape(...)
 
-        return outputs
+        return tuple(outputs)
 
 
 if __name__ == '__main__':

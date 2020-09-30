@@ -19,6 +19,8 @@ spektral = "*"
 joypy = "*"
 jupyter = "*"
 bidict = "*"
+jupyter-lsp = "*"
+python-language-server = {extras = ["all"],version = "*"}
 
 [requires]
 python_version = "3.7"
