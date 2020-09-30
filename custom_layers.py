@@ -6,7 +6,7 @@ from tensorflow.python.keras import Input
 from tensorflow.python.keras.layers import Concatenate
 from tensorflow.python.keras.models import Model
 
-from data_preparation import get_datasets, only_stacked_scored_labels
+from data_preparation import get_datasets, _only_stacked_scored_labels
 
 import networkx as nx
 
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     # GET SMALL EXPERIMENTAL DATASET
     # WARRING: It takes a while, so I suggest to move this testing code to jupyter (split code into cells and use `from custom_layers import *`)
     train_valid_ds, public_test_ds, private_test_ds = get_datasets()
-    train_valid_with_stacked_labels_ds = train_valid_ds.map(only_stacked_scored_labels)
+    train_valid_with_stacked_labels_ds = train_valid_ds.map(_only_stacked_scored_labels)
     exp_ds = train_valid_with_stacked_labels_ds.batch(2).take(1)
 
     # BUILD TESTING MODEL
