@@ -160,7 +160,7 @@ def _create_test_ds(raw_test_ds, feature_names):
     return test_ds
 
 
-def _trim_unlabeled_features_train(x, y):
+def _trim_unlabeled_features(x):
     label_seq_len = tf.cast(x['seq_scored'], tf.int32)
     seq_features = ['sequence', 'structure', 'predicted_loop_type']
     matrix_features = ['adjacency_matrix', 'edges_features_matrix']
@@ -170,59 +170,22 @@ def _trim_unlabeled_features_train(x, y):
 
     x['adjacency_matrix'] = x['adjacency_matrix'][:label_seq_len, :label_seq_len]
     x['edges_features_matrix'] = x['edges_features_matrix'][:label_seq_len, :label_seq_len, :]
-
-    return x, y
-
-def _trim_unlabeled_features_test(x):
-    label_seq_len = tf.cast(x['seq_scored'], tf.int32)
-    seq_features = ['sequence', 'structure', 'predicted_loop_type']
-    matrix_features = ['adjacency_matrix', 'edges_features_matrix']
     
-    for seq_feature in seq_features:
-        x[seq_feature] = x[seq_feature][:label_seq_len, :]
-
-    x['adjacency_matrix'] = x['adjacency_matrix'][:label_seq_len, :label_seq_len]
-    x['edges_features_matrix'] = x['edges_features_matrix'][:label_seq_len, :label_seq_len, :]
-
     return x
 
-def _only_stacked_scored_labels(x, y):
+
+def _only_stacked_scored_labels(y):
     tensors_to_stack = [y[scored_label] for scored_label in SCORED_LABEL_NAMES]
     stacked_scored_labels = tf.stack(tensors_to_stack, axis=1)
     y = {'stacked_scored_labels': stacked_scored_labels}
-    return x, y
+    return y
 
 
-def _add_stacked_scored_features(x, y):
+def _add_stacked_base_features(x):
     tensors_to_stack = [x[feature_name] for feature_name in ['sequence', 'structure', 'predicted_loop_type']]
     stacked_scored_features = tf.concat(tensors_to_stack, axis=1)
-    x = x.update({'stacked_scored_features': stacked_scored_features})
-    return x, y
-
-
-def _create_data_preparation_model():
-    # Define inputs
-    sequence_input = Input(shape=(None, 4), name='sequence')
-    structure_input = Input(shape=(None, 3), name='structure')
-    predicted_loop_type_input = Input(shape=(None, 7), name='predicted_loop_type')
-
-    adjacency_matrix_input = Input(shape=(None, None), name='adjacency_matrix')
-    edges_features_matrix_input = Input(shape=(None, None, 3), name='edges_features_matrix')
-
-    inputs = [sequence_input, structure_input, predicted_loop_type_input, adjacency_matrix_input,
-              edges_features_matrix_input]
-
-    # Stack features
-    features_to_stack = [sequence_input, structure_input, predicted_loop_type_input]
-    features_input = Concatenate(axis=2, name='features')(features_to_stack)
-
-    # Prepare input for subgraphing layer
-    outputs = [features_input, adjacency_matrix_input, edges_features_matrix_input]
-
-    # Create model
-    model = Model(inputs=inputs, outputs=outputs)
-
-    return model
+    x['stacked_scored_features'] = stacked_scored_features
+    return x
 
 # PUBLIC FUNCTIONS
 def get_raw_datasets():
@@ -244,15 +207,15 @@ def convert_to_datasets(raw_train_valid_ds, raw_public_test_ds, raw_private_test
     private_test_ds = _create_test_ds(raw_private_test_ds, FEATURE_NAMES)
     
     if trim:
-        train_valid_ds = train_valid_ds.map(_trim_unlabeled_features_train)
-        public_test_ds = public_test_ds.map(_trim_unlabeled_features_test)
-        private_test_ds = private_test_ds.map(_trim_unlabeled_features_test)
+        train_valid_ds = train_valid_ds.map(lambda x, y: (_trim_unlabeled_features(x), y))
+        public_test_ds = public_test_ds.map(_trim_unlabeled_features)
+        private_test_ds = private_test_ds.map(_trim_unlabeled_features)
         
-    train_valid_ds = train_valid_ds.map(_only_stacked_scored_labels)
+    train_valid_ds = train_valid_ds.map(lambda x, y: (x, _only_stacked_scored_labels(y)))
 
-#     train_valid_ds = train_valid_ds.map(_add_stacked_scored_features)
-#     public_test_ds = public_test_ds.map(_add_stacked_scored_features)
-#     private_test_ds = private_test_ds.map(_add_stacked_scored_features)
+    train_valid_ds = train_valid_ds.map(lambda x, y: (_add_stacked_base_features(x), y))
+    public_test_ds = public_test_ds.map(_add_stacked_base_features)
+    private_test_ds = private_test_ds.map(_add_stacked_base_features)
 
     return train_valid_ds, public_test_ds, private_test_ds
 
