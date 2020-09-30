@@ -97,9 +97,9 @@ def get_subgraphs(features_sequence, adjacency_matrix, edges_features_matrix, ne
 
 
 def get_subgraphs_of_batch(features_batch, adj_matrix_batch, edges_features_matrix_batch, neigh_size):
-    features_batch = features_batch.numpy()
-    adj_matrix_batch = adj_matrix_batch.numpy()
-    edges_features_matrix_batch = edges_features_matrix_batch.numpy()
+    features_batch = features_batch.numpy().astype(np.float32)
+    adj_matrix_batch = adj_matrix_batch.numpy().astype(np.float32)
+    edges_features_matrix_batch = edges_features_matrix_batch.numpy().astype(np.float32)
 
     batch_size = features_batch.shape[0]
 
