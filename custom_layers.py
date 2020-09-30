@@ -136,7 +136,36 @@ class SubgraphingLayer(tf.keras.layers.Layer):
                                       self.neighbourhood_size],
                                  Tout=[tf.float32, tf.float32, tf.float32])
 
-#         Maybe some outputs.set_shape(...)
+        subgraphed_features_batch, subgraphed_adj_matrices_batch, subgraphed_edges_features_matrices_batch = outputs
+        
+#         batch_size = tf.shape(features_batch)[0]
+#         seq_len = tf.shape(features_batch)[1]
+#         features_size = tf.shape(features_batch)[2]
+        batch_size = None
+        seq_len = None
+        features_size = features_batch.shape[2]
+        
+        shape = [batch_size, seq_len, self.neighbourhood_size]
+        
+        s1 = shape + [features_size]
+        s2 = shape + [self.neighbourhood_size]
+        s3 = shape + [self.neighbourhood_size, 3]
+        
+#         print(s1)
+#         print(s2)
+#         print(s3)
+        
+#         print(f"subgraphed_features_batch.shape: {subgraphed_features_batch.shape}")
+#         print(f"subgraphed_adj_matrices_batch.shape: {subgraphed_adj_matrices_batch.shape}")
+#         print(f"subgraphed_edges_features_matrices_batch.shape: {subgraphed_edges_features_matrices_batch.shape}")
+        
+        subgraphed_features_batch.set_shape(s1)
+        subgraphed_adj_matrices_batch.set_shape(s2)
+        subgraphed_edges_features_matrices_batch.set_shape(s3)
+        
+#         print(f"subgraphed_features_batch.shape: {subgraphed_features_batch.shape}")
+#         print(f"subgraphed_adj_matrices_batch.shape: {subgraphed_adj_matrices_batch.shape}")
+#         print(f"subgraphed_edges_features_matrices_batch.shape: {subgraphed_edges_features_matrices_batch.shape}")
 
         return tuple(outputs)
 
