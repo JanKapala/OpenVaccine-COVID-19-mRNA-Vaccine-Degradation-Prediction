@@ -13,6 +13,8 @@ import networkx as nx
 from networkx.generators.classic import path_graph
 from networkx.algorithms.shortest_paths.weighted import all_pairs_dijkstra_path_length as dijkstra
 
+import matplotlib.pyplot as plt
+
 
 def get_neighbourhood_indices(adjacency_matrix, neigh_size):
     # construct nx Graph
@@ -121,7 +123,7 @@ def get_subgraphs_of_batch(features_batch, adj_matrix_batch, edges_features_matr
     return subgraphed_features_batch, subgraphed_adj_matrices_batch, subgraphed_edges_features_matrices_batch
 
 
-class SubgraphingLayer(tf.keras.layers.Layer):
+class Subgraphing(tf.keras.layers.Layer):
     def __init__(self, neighbourhood_size, **kwargs):
         super().__init__(**kwargs)
         self.neighbourhood_size = neighbourhood_size
@@ -136,44 +138,35 @@ class SubgraphingLayer(tf.keras.layers.Layer):
                                       self.neighbourhood_size],
                                  Tout=[tf.float32, tf.float32, tf.float32])
 
-#         Maybe some outputs.set_shape(...)
+        subgraphed_features_batch, subgraphed_adj_matrices_batch, subgraphed_edges_features_matrices_batch = outputs
+
+        #         batch_size = tf.shape(features_batch)[0]
+        #         seq_len = tf.shape(features_batch)[1]
+        #         features_size = tf.shape(features_batch)[2]
+        batch_size = None
+        seq_len = None
+        features_size = features_batch.shape[2]
+
+        shape = [batch_size, seq_len, self.neighbourhood_size]
+
+        s1 = shape + [features_size]
+        s2 = shape + [self.neighbourhood_size]
+        s3 = shape + [self.neighbourhood_size, 3]
+
+        #         print(s1)
+        #         print(s2)
+        #         print(s3)
+
+        #         print(f"subgraphed_features_batch.shape: {subgraphed_features_batch.shape}")
+        #         print(f"subgraphed_adj_matrices_batch.shape: {subgraphed_adj_matrices_batch.shape}")
+        #         print(f"subgraphed_edges_features_matrices_batch.shape: {subgraphed_edges_features_matrices_batch.shape}")
+
+        subgraphed_features_batch.set_shape(s1)
+        subgraphed_adj_matrices_batch.set_shape(s2)
+        subgraphed_edges_features_matrices_batch.set_shape(s3)
+
+        #         print(f"subgraphed_features_batch.shape: {subgraphed_features_batch.shape}")
+        #         print(f"subgraphed_adj_matrices_batch.shape: {subgraphed_adj_matrices_batch.shape}")
+        #         print(f"subgraphed_edges_features_matrices_batch.shape: {subgraphed_edges_features_matrices_batch.shape}")
 
         return tuple(outputs)
-
-
-if __name__ == '__main__':
-    # GET SMALL EXPERIMENTAL DATASET
-    # WARRING: It takes a while, so I suggest to move this testing code to jupyter (split code into cells and use `from custom_layers import *`)
-    train_valid_ds, public_test_ds, private_test_ds = get_datasets()
-    train_valid_with_stacked_labels_ds = train_valid_ds.map(_only_stacked_scored_labels)
-    exp_ds = train_valid_with_stacked_labels_ds.batch(2).take(1)
-
-    # BUILD TESTING MODEL
-
-    # Define inputs
-    sequence_input = Input(shape=(None, 4), name='sequence')
-    structure_input = Input(shape=(None, 3), name='structure')
-    predicted_loop_type_input = Input(shape=(None, 7), name='predicted_loop_type')
-
-    adjacency_matrix_input = Input(shape=(None, None), name='adjacency_matrix')
-    edges_features_matrix_input = Input(shape=(None, None, 3), name='edges_features_matrix')
-
-    inputs = [sequence_input, structure_input, predicted_loop_type_input, adjacency_matrix_input,
-              edges_features_matrix_input]
-
-    # Stack features
-    features_to_stack = [sequence_input, structure_input, predicted_loop_type_input]
-    features_input = Concatenate(axis=2, name='features')(features_to_stack)
-
-    # Prepare input for subgraphing layer
-    inputs_for_sg_layer = [features_input, adjacency_matrix_input, edges_features_matrix_input]
-
-    sg_layer = SubgraphingLayer(10)
-    outputs = sg_layer(inputs_for_sg_layer)
-
-    # Create model
-    model = Model(inputs=inputs, outputs=outputs)
-
-    output = model.predict(exp_ds)
-
-    # TODO: some check on output
