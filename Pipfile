@@ -21,6 +21,7 @@ jupyter = "*"
 bidict = "*"
 jupyter-lsp = "*"
 python-language-server = {extras = ["all"],version = "*"}
+coverage = "*"
 
 [requires]
 python_version = "3.7"

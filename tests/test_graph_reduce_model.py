@@ -1,6 +1,8 @@
 from unittest import TestCase
 
 import numpy as np
+
+import tensorflow as tf
 from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.layers import RNN, TimeDistributed, Dense, Concatenate
 
@@ -72,6 +74,7 @@ def get_test_model(seq_len, stacked_features_size, edges_features_matrix_depth, 
 
     return model
 
+
 def prepare_control_matrices():
     control_subgraphs_adjacency_matrices = [
         np.array([[0, 1, 0],
@@ -106,6 +109,49 @@ def prepare_control_matrices():
     return control_subgraphs_adjacency_matrices, control_subgraphs_edges_features_matrices
 
 
+def prepare_inputs_batches(batch_size, seq_len, neighbourhood_size, feature_size, edges_features_size):
+    features_batch = tf.random.uniform((batch_size, seq_len, neighbourhood_size, feature_size))
+    adj_matrices_batch = tf.random.uniform((batch_size, seq_len, neighbourhood_size, neighbourhood_size))
+    edges_features_matrices_batch = tf.random.uniform((batch_size, seq_len, neighbourhood_size, neighbourhood_size,
+                                                       edges_features_size))
+    inputs_batch = (features_batch, adj_matrices_batch, edges_features_matrices_batch)
+
+    features_batch_at_t = features_batch[:, 0, :, :]
+    adj_matrices_batch_at_t = adj_matrices_batch[:, 0, :, :]
+    edges_features_matrices_batch_at_t = edges_features_matrices_batch[:, 0, :, :, :]
+    inputs_batch_at_t = (features_batch_at_t, adj_matrices_batch_at_t, edges_features_matrices_batch_at_t)
+
+    return inputs_batch, inputs_batch_at_t
+
+
+def prepare_inputs_batches_symbolic(neighbourhood_size, feature_size, edges_features_size):
+    features_batch_symbolic = tf.keras.layers.Input((None, neighbourhood_size, feature_size))
+    adj_matrices_batch_symbolic = tf.keras.layers.Input((None, neighbourhood_size, neighbourhood_size))
+    edges_features_matrices_batch_symbolic = tf.keras.layers.Input((None, neighbourhood_size, neighbourhood_size,
+                                                                    edges_features_size))
+    inputs_batch_symbolic = (features_batch_symbolic, adj_matrices_batch_symbolic,
+                             edges_features_matrices_batch_symbolic)
+
+    features_batch_symbolic_at_t = features_batch_symbolic[:, 0, :, :]
+    adj_matrices_batch_symbolic_at_t = adj_matrices_batch_symbolic[:, 0, :, :]
+    edges_features_matrices_batch_symbolic_at_t = edges_features_matrices_batch_symbolic[:, 0, :, :, :]
+    inputs_batch_symbolic_at_t = (features_batch_symbolic_at_t, adj_matrices_batch_symbolic_at_t,
+                                  edges_features_matrices_batch_symbolic_at_t)
+
+    return inputs_batch_symbolic, inputs_batch_symbolic_at_t
+
+
+def prepare_graph_reduce_cell(units):
+    cell = GraphReduceCell(units)
+    return cell
+
+
+def prepare_graph_reduce_layer(units, return_sequences):
+    cell = prepare_graph_reduce_cell(units)
+    rnn = tf.keras.layers.RNN(cell, return_sequences=return_sequences)
+    return rnn
+
+
 class TestGraphReduceModel(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -119,10 +165,26 @@ class TestGraphReduceModel(TestCase):
         cls.NEIGHBOURHOOD_SIZE = 10
         cls.UNITS = 7
         cls.STACKED_LABELS_SIZE = 3
+        cls.NEIGHBOURHOOD_SIZE = 10
 
         cls.exp_ds = get_exp_dataset(cls.BATCH_SIZE)
         cls.test_model = get_test_model(cls.SEQ_LEN, cls.STACKED_FEATURES_SIZE, cls.EDGES_FEATURES_MATRIX_DEPTH,
                                         cls.NEIGHBOURHOOD_SIZE, cls.UNITS)
+
+        cls.inputs_batch, cls.inputs_batch_at_t = prepare_inputs_batches(cls.BATCH_SIZE, cls.SEQ_LEN,
+                                                                         cls.NEIGHBOURHOOD_SIZE,
+                                                                         cls.STACKED_FEATURES_SIZE,
+                                                                         cls.EDGES_FEATURES_MATRIX_DEPTH)
+
+        cls.inputs_batch_symbolic, cls.inputs_batch_symbolic_at_t = prepare_inputs_batches_symbolic(
+            cls.NEIGHBOURHOOD_SIZE,
+            cls.STACKED_FEATURES_SIZE,
+            cls.EDGES_FEATURES_MATRIX_DEPTH)
+
+        cls.cell = prepare_graph_reduce_cell(cls.UNITS)
+        cls.rnn = prepare_graph_reduce_layer(cls.UNITS, return_sequences=False)
+        cls.rnn_seq = prepare_graph_reduce_layer(cls.UNITS, return_sequences=True)
+
 
     def test_get_subgraphs(self):
         subgraphs_features_sequences, subgraphs_adjacency_matrices, subgraphs_edges_features_matrices = get_subgraphs(
@@ -160,6 +222,33 @@ class TestGraphReduceModel(TestCase):
                                                   self.NEIGHBOURHOOD_SIZE])
         self.assertEqual(outputs_batch[2].shape, [self.BATCH_SIZE, self.SEQ_LEN, self.NEIGHBOURHOOD_SIZE,
                                                   self.NEIGHBOURHOOD_SIZE, self.EDGES_FEATURES_MATRIX_DEPTH])
+
+    def test_graph_reduce_cell(self):
+        cell_output_eager, cell_state_eager = self.cell(self.inputs_batch_at_t,
+                                                        self.cell.get_initial_state(self.inputs_batch_at_t,
+                                                                                    self.BATCH_SIZE,
+                                                                                    self.inputs_batch_at_t[0].dtype))
+        self.assertEqual(list(cell_output_eager.shape), [self.BATCH_SIZE, self.UNITS])
+
+        cell_output_symbolic, cell_state_symbolic = self.cell(self.inputs_batch_symbolic_at_t,
+                                                              self.cell.get_initial_state(
+                                                                  self.inputs_batch_symbolic_at_t, self.BATCH_SIZE,
+                                                                  self.inputs_batch_at_t[0].dtype))
+        self.assertEqual(list(cell_output_symbolic.shape), [None, self.UNITS])
+
+    def test_graph_reduce_layer(self):
+        rnn_output_eager = self.rnn(self.inputs_batch)
+        rnn_output_symbolic = self.rnn(self.inputs_batch_symbolic)
+
+        self.assertEqual(list(rnn_output_eager.shape), [self.BATCH_SIZE, self.UNITS])
+        self.assertEqual(list(rnn_output_symbolic.shape), [None, self.UNITS])
+
+    def test_graph_reduce_layer_return_sequences(self):
+        rnn_output_eager_seq = self.rnn_seq(self.inputs_batch)
+        rnn_output_symbolic_seq = self.rnn_seq(self.inputs_batch_symbolic)
+
+        assert list(rnn_output_eager_seq.shape) == [self.BATCH_SIZE, self.SEQ_LEN, self.UNITS]
+        assert list(rnn_output_symbolic_seq.shape) == [None, None, self.UNITS]
 
     def test_graph_reduce_model(self):
         predictions = self.test_model.predict(self.exp_ds)
