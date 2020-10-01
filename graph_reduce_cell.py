@@ -47,3 +47,10 @@ class GraphReduceCell(tf.keras.layers.AbstractRNNCell):
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         return [tf.zeros((batch_size, self.state_size), dtype=dtype)]
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({'units': self.units,
+                       'conv_graph_layer': self.conv_graph_layer,
+                       'pool_graph_layer': self.pool_graph_layer})
+        return config
