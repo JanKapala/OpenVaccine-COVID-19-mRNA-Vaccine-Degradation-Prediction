@@ -144,7 +144,7 @@ class Subgraphing(tf.keras.layers.Layer):
         subgraphed_edges_features_matrices_batch.set_shape(s3)
 
         return tuple(outputs)
-    
+
     def get_config(self):
         config = super().get_config()
         config.update({'neighbourhood_size': self.neighbourhood_size})
