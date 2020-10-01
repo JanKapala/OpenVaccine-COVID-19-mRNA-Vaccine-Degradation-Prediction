@@ -1,19 +1,8 @@
 import tensorflow as tf
 import numpy as np
-from bidict import bidict
-
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Concatenate
-from tensorflow.python.keras.models import Model
-
-from data_preparation import get_datasets, _only_stacked_scored_labels
 
 import networkx as nx
-
-from networkx.generators.classic import path_graph
 from networkx.algorithms.shortest_paths.weighted import all_pairs_dijkstra_path_length as dijkstra
-
-import matplotlib.pyplot as plt
 
 
 def get_neighbourhood_indices(adjacency_matrix, neigh_size):
