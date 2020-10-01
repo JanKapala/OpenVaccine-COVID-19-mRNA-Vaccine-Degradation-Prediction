@@ -153,3 +153,5 @@ def inspect_dataset_columns(ds):
         construct_column_desc(labels, 'labels')
     else:
         raise Exception('Invalid dataset, should be tf.data.Dataset with internal structure of example: ({...},{...})')
+    
+    print(f"dataset cardinality: {ds.cardinality()}")
