@@ -123,3 +123,33 @@ def visualize_random_raw_examples(raw_ds, examples_no=5, **kwargs):
     fig, axes = plt.subplots(1, examples_no, figsize=(plot_size * examples_no, plot_size))
     for i, ax in enumerate(axes.flat):
         visualize_raw_example(raw_ds.iloc[example_indices[i], :], ax=ax, **kwargs)
+
+
+def construct_column_desc(columns, name):
+    if name[-1] == 's':
+        name = name[:-1]
+    column_name_key_name = name.lower() + '_name'
+    column_desc_dict = {column_name_key_name:[], 'tensor_shape':[]}
+    print(name.upper()+'S:')
+    for column_name, values in columns.items():
+        column_desc_dict[column_name_key_name].append(column_name)
+        column_desc_dict['tensor_shape'].append(values.shape)
+
+    display(pd.DataFrame(column_desc_dict))
+
+
+def inspect_dataset_columns(ds):
+    example = next(iter(ds))
+
+    if type(example) == dict:
+        features = example
+        construct_column_desc(features, 'features')
+
+    elif type(example) == tuple:
+        features = example[0]
+        labels = example[1]
+        construct_column_desc(features, 'features')
+        print()
+        construct_column_desc(labels, 'labels')
+    else:
+        raise Exception('Invalid dataset, should be tf.data.Dataset with internal structure of example: ({...},{...})')
