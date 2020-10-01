@@ -49,11 +49,11 @@ def get_exp_dataset(batch_size):
 
 def get_test_model(seq_len, stacked_features_size, edges_features_matrix_depth, neighbourhood_size, units):
     # INPUTS
-    stacked_scored_features_input = Input(shape=(seq_len, stacked_features_size), name='stacked_scored_features')
+    stacked_base_features_input = Input(shape=(seq_len, stacked_features_size), name='stacked_base_features')
     adjacency_matrix_input = Input(shape=(seq_len, seq_len), name='adjacency_matrix')
     edges_features_matrix_input = Input(shape=(seq_len, seq_len, edges_features_matrix_depth),
                                         name='edges_features_matrix')
-    inputs = (stacked_scored_features_input, adjacency_matrix_input, edges_features_matrix_input)
+    inputs = (stacked_base_features_input, adjacency_matrix_input, edges_features_matrix_input)
 
     # ACTUAL MODEL
     x = Subgraphing(neighbourhood_size)(inputs)
@@ -142,7 +142,7 @@ class TestGraphReduceModel(TestCase):
     def test_subgraphing(self):
         data_batch = next(iter(self.exp_ds))
         x, y = data_batch
-        inputs_batch = (x['stacked_scored_features'], x['adjacency_matrix'], x['edges_features_matrix'])
+        inputs_batch = (x['stacked_base_features'], x['adjacency_matrix'], x['edges_features_matrix'])
 
         self.assertEqual(inputs_batch[0].shape, (self.BATCH_SIZE, self.SEQ_LEN, self.STACKED_FEATURES_SIZE))
         self.assertEqual(inputs_batch[1].shape, (self.BATCH_SIZE, self.SEQ_LEN, self.SEQ_LEN))

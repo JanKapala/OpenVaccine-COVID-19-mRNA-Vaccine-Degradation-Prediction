@@ -183,8 +183,8 @@ def _only_stacked_scored_labels(y):
 
 def _add_stacked_base_features(x):
     tensors_to_concat = [x[feature_name] for feature_name in ['sequence', 'structure', 'predicted_loop_type']]
-    stacked_scored_features = tf.concat(tensors_to_concat, axis=1)
-    x['stacked_base_features'] = stacked_scored_features
+    stacked_base_features = tf.concat(tensors_to_concat, axis=1)
+    x['stacked_base_features'] = stacked_base_features
     return x
 
 
