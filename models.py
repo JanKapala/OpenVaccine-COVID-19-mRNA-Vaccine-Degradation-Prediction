@@ -6,7 +6,7 @@ from tensorflow.keras.optimizers import Adam, SGD
 
 import spektral
 from spektral.layers import GraphConv, GraphAttention, GlobalAttentionPool
-from data_preparation import get_datasets, ds_summary, _only_stacked_scored_labels, split_into_train_and_valid, trim
+from data_preparation import *
 
 TRAINING_SCORED_SEQ_LEN = 68
 TESTING_SCORED_SEQ_LEN = 91
@@ -142,9 +142,8 @@ def get_predictions(ds, model, prediction_batch_size=64):
 
 
 if __name__ == '__main__':
-    train_valid_ds, public_test_ds, private_test_ds = get_datasets()
-    train_valid_with_stacked_labels_ds = train_valid_ds.map(_only_stacked_scored_labels)
-    train_ds, valid_ds = split_into_train_and_valid(train_valid_with_stacked_labels_ds, split_factor=0.3)
+    train_valid_ds, public_test_ds, private_test_ds = load_base_datasets()
+    train_ds, valid_ds = split_into_train_and_valid(train_valid_ds, split_factor=0.3)
 
     training_model, testing_model = get_simple_model()
 
