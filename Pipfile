@@ -18,7 +18,10 @@ jupyterlab-git = "*"
 spektral = "*"
 joypy = "*"
 jupyter = "*"
-tensorboard-plugin-profile = "*"
+bidict = "*"
+jupyter-lsp = "*"
+python-language-server = {extras = ["all"],version = "*"}
+coverage = "*"
 
 [requires]
 python_version = "3.7"
