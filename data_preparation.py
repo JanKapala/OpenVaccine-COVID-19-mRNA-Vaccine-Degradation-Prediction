@@ -9,7 +9,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from tensorflow import TensorSpec
 
-from subgraphing import Subgraphing
+from custom_layers.subgraphing import Subgraphing
 
 
 # CONSTANTS

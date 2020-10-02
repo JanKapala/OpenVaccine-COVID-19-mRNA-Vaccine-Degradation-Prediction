@@ -7,8 +7,8 @@ from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.layers import RNN, TimeDistributed, Dense, Concatenate
 
 from data_preparation import get_datasets
-from graph_reduce_cell import GraphReduceCell
-from subgraphing import get_subgraphs, Subgraphing
+from custom_layers.graph_reduce_cell import GraphReduceCell
+from custom_layers.subgraphing import get_subgraphs, Subgraphing
 
 
 def prepare_matrices():

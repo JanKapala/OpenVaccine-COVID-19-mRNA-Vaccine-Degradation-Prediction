@@ -46,7 +46,7 @@ def create_submission(model, datasets, raw_datasets):
 
 if __name__ == '__main__':
     SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-    SUBMISSIONS_DIR = os.path.join(SCRIPT_DIR, 'submissions')
+    SUBMISSIONS_DIR = os.path.join(SCRIPT_DIR, '')
 
     # GET SAVED MODEL FROM FILE
     TESTING_MODEL_PATH = None
