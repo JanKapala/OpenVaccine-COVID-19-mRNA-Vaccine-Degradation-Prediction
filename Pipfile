@@ -18,6 +18,7 @@ jupyterlab-git = "*"
 spektral = "*"
 joypy = "*"
 jupyter = "*"
+tensorboard-plugin-profile = "*"
 
 [requires]
 python_version = "3.7"
