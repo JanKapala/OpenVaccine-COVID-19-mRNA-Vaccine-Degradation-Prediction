@@ -3,8 +3,8 @@ import tensorflow as tf
 
 class CustomLSTMCell(tf.keras.layers.AbstractRNNCell):
     def __init__(self, units, **kwargs):
-        self.units = units
         super().__init__(**kwargs)
+        self.units = units
 
     @property
     def state_size(self):

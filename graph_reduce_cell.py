@@ -24,10 +24,10 @@ class GraphReduceCell(tf.keras.layers.AbstractRNNCell):
     """
 
     def __init__(self, units, **kwargs):
+        super().__init__(**kwargs)
         self.units = units
         self.conv_graph_layer = GraphAttention(units)
         self.pool_graph_layer = GlobalAttentionPool(units)
-        super().__init__(**kwargs)
 
     @property
     def state_size(self):
