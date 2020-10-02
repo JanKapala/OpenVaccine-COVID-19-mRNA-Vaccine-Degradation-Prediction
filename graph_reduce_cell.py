@@ -50,7 +50,7 @@ class GraphReduceCell(tf.keras.layers.AbstractRNNCell):
 
     def get_config(self):
         config = super().get_config()
-        config.update({'units': self.units,
-                       'conv_graph_layer': self.conv_graph_layer,
-                       'pool_graph_layer': self.pool_graph_layer})
+        config.update({'units': self.units})
+                       # 'conv_graph_layer': self.conv_graph_layer,
+                       # 'pool_graph_layer': self.pool_graph_layer})
         return config
