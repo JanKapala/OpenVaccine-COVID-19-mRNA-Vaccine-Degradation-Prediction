@@ -307,8 +307,11 @@ def ds_summary(ds, name):
     print(next(iter(ds)))
 
 
-def split_into_train_and_valid(train_valid_ds, split_factor=0.3):
-    length = train_valid_ds.cardinality().numpy()
+def split_into_train_and_valid(train_valid_ds, split_factor=0.3):    
+    length = 0
+    for i in train_valid_ds:
+        length +=1
+        
     valid_ds_length = int(split_factor * length)
     train_valid_ds_shuffled = train_valid_ds.shuffle(length)
     train_ds = train_valid_ds_shuffled.skip(valid_ds_length)
