@@ -1,6 +1,6 @@
 import pandas as pd
 from models import get_predictions
-from data_preparation import get_raw_datasets, get_datasets
+from data_preparation import *
 import tensorflow as tf
 import os
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     testing_model = tf.keras.models.load_model(TESTING_MODEL_PATH)
 
     _, raw_public_test_ds, raw_private_test_ds = get_raw_datasets()
-    _, public_test_ds, private_test_ds = get_datasets()
+    _, public_test_ds, private_test_ds = load_base_datasets()
 
     submission = create_submission(testing_model, [public_test_ds, private_test_ds],
                                    [raw_public_test_ds, raw_private_test_ds])

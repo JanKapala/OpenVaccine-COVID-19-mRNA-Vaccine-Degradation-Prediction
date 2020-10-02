@@ -1,10 +1,15 @@
 /__pycache__/
 /.idea/
-/.ipynb_checkpoints/
+.ipynb_checkpoints/
 /logs/
 /sequence_generator_model_tmp/
 submission.csv
 /testing_model/
 /training_model/
 /ipynb/__pycache__/
+/datasets/private_test_ds/
+/datasets/public_test_ds/
+/datasets/train_valid_ds/
+/datasets/subgraphed
+/models
 model.png
