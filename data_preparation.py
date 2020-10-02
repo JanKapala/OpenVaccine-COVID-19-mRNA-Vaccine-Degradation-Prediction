@@ -7,12 +7,12 @@ import tensorflow as tf
 from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
+from tensorflow import TensorSpec
 
 from subgraphing import Subgraphing
 
-# CONSTANTS
-from tensorflow import TensorSpec
 
+# CONSTANTS
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 DATASETS_DIR = os.path.join(SCRIPT_DIR, 'datasets')
@@ -343,8 +343,8 @@ def load_base_datasets(save=True):
     
     if save:
         _save_dataset(train_valid_ds, TRAIN_VALID_DS_PATH)
-        _save_dataset(train_valid_ds, PUBLIC_TEST_DS_PATH)
-        _save_dataset(train_valid_ds, PRIVATE_TEST_DS_PATH)
+        _save_dataset(public_test_ds, PUBLIC_TEST_DS_PATH)
+        _save_dataset(private_test_ds, PRIVATE_TEST_DS_PATH)
         
     return train_valid_ds, public_test_ds, private_test_ds
 
