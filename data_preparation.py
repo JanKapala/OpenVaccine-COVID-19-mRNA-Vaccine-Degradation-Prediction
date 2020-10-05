@@ -11,6 +11,7 @@ from tensorflow import TensorSpec
 
 from custom_layers.subgraphing import Subgraphing
 
+from visualization import *
 
 # CONSTANTS
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -32,6 +33,8 @@ ERROR_LABEL_NAMES = ['reactivity_error', 'deg_error_Mg_pH10', 'deg_error_pH10', 
 NORMAL_LABEL_NAMES = ['reactivity', 'deg_Mg_pH10', 'deg_pH10', 'deg_Mg_50C', 'deg_50C']
 ALL_LABEL_NAMES = ERROR_LABEL_NAMES + NORMAL_LABEL_NAMES
 SCORED_LABEL_NAMES = ['reactivity', 'deg_Mg_pH10', 'deg_Mg_50C']
+
+SUBGRAPH_OPERATION_BATCH_SIZE=64
 
 TEST_DS_SPEC = ({'sequence': TensorSpec(shape=(None, 4), dtype=tf.float32, name=None),
                  'structure': TensorSpec(shape=(None, 3), dtype=tf.float32, name=None),
@@ -193,7 +196,7 @@ def _subgraph_dataset(ds, neighbourhood_size):
         else:
             return x
 
-    return ds.batch(1).map(subgraphing_map_fn).unbatch().cache()
+    return ds.batch(SUBGRAPH_OPERATION_BATCH_SIZE).map(subgraphing_map_fn).unbatch()
     
 
 def _save_dataset(ds, path):
