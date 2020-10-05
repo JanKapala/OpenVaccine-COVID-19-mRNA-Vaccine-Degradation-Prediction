@@ -137,7 +137,11 @@ def get_graph_model():
 
 def get_predictions(ds, model, prediction_batch_size=4096):
     prediction_ds = ds.batch(prediction_batch_size)
-    predictions = model.predict(prediction_ds)['stacked_scored_labels']
+    raw_predictions = model.predict(prediction_ds)
+    if type(raw_predictions) == dict:
+        predictions = raw_predictions['stacked_scored_labels']
+    else:
+        predictions = raw_predictions
     return predictions
 
 
