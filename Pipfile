@@ -23,6 +23,7 @@ jupyter-lsp = "*"
 python-language-server = {extras = ["all"],version = "*"}
 coverage = "*"
 tensorboard-plugin-profile = "*"
+keras-tuner = "*"
 
 [requires]
 python_version = "3.7"
