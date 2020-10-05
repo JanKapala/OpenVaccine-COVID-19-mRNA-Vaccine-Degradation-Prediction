@@ -18,7 +18,9 @@ def predictions_to_submission(predictions, raw_ds, missing_value=0.0):
                        }
     for example_index, example in enumerate(predictions):
         example_id = get_example_id(example_index, raw_ds)
+        last_seqpos_index = -1
         for seqpos_index, (reactivity, deg_Mg_pH10, deg_Mg_50C) in enumerate(example):
+            last_seqpos_index = seqpos_index
             id_seqpos = f"{example_id}_{seqpos_index}"
             deg_pH10 = missing_value
             deg_50C = missing_value
@@ -30,6 +32,18 @@ def predictions_to_submission(predictions, raw_ds, missing_value=0.0):
             submission_dict['deg_pH10'].append(deg_pH10)
             submission_dict['deg_Mg_50C'].append(deg_Mg_50C)
             submission_dict['deg_50C'].append(deg_50C)
+        # fill misssing sequence positions
+        resume_index = last_seqpos_index + 1
+        seq_len = raw_ds['seq_length'].values[0]
+        for seqpos_index in range(resume_index, seq_len):
+            id_seqpos = f"{example_id}_{seqpos_index}"
+            submission_dict['id_seqpos'].append(id_seqpos)
+            submission_dict['reactivity'].append(missing_value)
+            submission_dict['deg_Mg_pH10'].append(missing_value)
+            submission_dict['deg_pH10'].append(missing_value)
+            submission_dict['deg_Mg_50C'].append(missing_value)
+            submission_dict['deg_50C'].append(missing_value)
+            
 
     return pd.DataFrame(submission_dict)
 
